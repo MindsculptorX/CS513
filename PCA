@@ -1,0 +1,38 @@
+library(class)
+library(caret)
+
+set.seed(10)
+
+# loading the data
+RawData <- read.csv('http://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/pima-indians-diabetes.data', header=FALSE)
+
+# creating matrices for Xs and Y
+responseY <- as.matrix(RawData[,dim(RawData)[2]])
+predictorX <- as.matrix(RawData[,1:(dim(RawData)[2]-1)])
+
+# PCs from PCA
+pca <- princomp(predictorX, cor=T) # principal components analysis using correlation matrix
+pc.comp <- pca$scores
+pc.comp1 <- -1*pc.comp[,1]
+pc.comp2 <- -1*pc.comp[,2]
+
+# data partition for train/test sets.
+trainIndex <- createDataPartition(responseY, times=1, p = 0.8, list = F)
+X = cbind(pc.comp1, pc.comp2)
+
+# fitting models for 30 different k-values (one for test and one for train set for each K)
+train.error = rep(0,30)
+test.error = rep(0,30)
+for(k in 1:30){
+    model.knn.train <- knn(train=X[trainIndex,], test=X[trainIndex,], cl=responseY[trainIndex], k=k, prob=F)
+    train.error[k] <- sum(model.knn.train!=responseY[trainIndex])/length(responseY[trainIndex])
+    model.knn.test <- knn(train=X[trainIndex,], test=X[-trainIndex,], cl=responseY[trainIndex], k=k, prob=F)
+    test.error[k] <- sum(model.knn.test!=responseY[-trainIndex])/length(responseY[-trainIndex])
+}
+
+# PLOTTING:
+plot(1:30, train.error, col='red', type = 'b', ylim = c(0,0.4))
+points(1:30, test.error, col='blue', type = 'b')
+
+
+plot(pc.comp1[-trainIndex], pc.comp2[-trainIndex], col = model.knn.test)
